@@ -20,6 +20,8 @@ import multiprocessing
 import pickle
 import time
 import warnings
+import random
+
 from typing import List, Optional
 
 import torch
@@ -98,6 +100,8 @@ class ModelTpServer:
             nccl_port=nccl_port,
             server_args=server_args,
         )
+        
+        self.offline_policy = server_args.offline_policy
 
         if is_multimodal_model(server_args.model_path):
             self.processor = get_processor(
@@ -213,6 +217,20 @@ class ModelTpServer:
                     self.abort_request(recv_req)
                 else:
                     raise ValueError(f"Invalid request: {recv_req}")
+            # if len(self.waiting_queue) > 0:
+            #     print('len waiting_queue:', len(self.waiting_queue))
+            if self.offline_policy=="length":
+                self.waiting_queue.sort(key=lambda x: len(x.origin_input_ids))
+            elif self.offline_policy=="reverse_length":
+                self.waiting_queue.sort(key=lambda x: len(x.origin_input_ids), reverse=True)
+            elif self.offline_policy=="random":
+                # print('len waiting_queue:', len(self.waiting_queue))
+                random.shuffle(self.waiting_queue)
+            # random.shuffle(self.waiting_queue)
+            # if len(self.waiting_queue) > 0:
+                # print('len waiting_queue 2:', len(self.waiting_queue))
+            # for req in self.waiting_queue:
+            #     print('input len:', len(req.origin_input_ids))
 
             # Forward
             self.forward_step()
@@ -247,7 +265,7 @@ class ModelTpServer:
                     self.forward_decode_batch(self.running_batch)
 
                     # Print stats
-                    if self.tp_rank == 0 and self.decode_forward_ct % 40 == 0:
+                    if self.tp_rank == 0 and self.decode_forward_ct % 5 == 0:
                         self.print_stats()
 
                     if self.running_batch.is_empty():
@@ -348,6 +366,7 @@ class ModelTpServer:
             ),
             self.max_req_input_len - 1 - len(req.origin_input_ids),
         )
+        # print('input len:', len(req.origin_input_ids))
         self.waiting_queue.append(req)
 
     def get_new_prefill_batch(self) -> Optional[ScheduleBatch]:
@@ -359,11 +378,15 @@ class ModelTpServer:
 
         # Compute matched prefix length
         for req in self.waiting_queue:
+            if len(req.output_ids) > 0:
+                print('output len 111:', len(req.output_ids))
             req.input_ids = req.origin_input_ids + req.output_ids
             # NOTE: the prefix_indices must always be aligned with last_node
             req.prefix_indices, req.last_node = self.tree_cache.match_prefix(
                 rid=req.rid, key=req.adjust_max_prefix_ids()
             )
+            if len(req.prefix_indices) >0:
+                print('prefix len matching :', len(req.prefix_indices))
             req.extend_input_len = len(req.input_ids) - len(req.prefix_indices)
 
         # Get priority queue
@@ -385,6 +408,7 @@ class ModelTpServer:
                 self.current_inflight_req
             )
 
+
         for req in self.waiting_queue:
 
             res = adder.add_one_req(req)
@@ -393,6 +417,11 @@ class ModelTpServer:
                 or adder.no_remaining_tokens()
                 or running_bs + len(adder.can_run_list) >= self.max_running_requests
             ):
+                # print('res:', res)
+                # print('remaining tokens:', adder.no_remaining_tokens())
+                # print('running bs:', running_bs)
+                # print('can run list:', len(adder.can_run_list))
+                # print('max running requests:', self.max_running_requests)
                 break
 
         can_run_list = adder.can_run_list

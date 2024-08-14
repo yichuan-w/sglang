@@ -136,7 +136,9 @@ class TokenizerManager:
     async def generate_request(self, obj: GenerateReqInput, request=None):
         if self.to_create_loop:
             self.create_handle_loop()
-
+        if ' pwd<s> pwd<s> pwd<s> pwd<' in obj.text:
+            print("1111111111111 Invalid input text.")
+            print('obj.text:', obj.text)
         obj.post_init()
         is_single = obj.is_single
 
@@ -163,6 +165,11 @@ class TokenizerManager:
                 if obj.input_ids is None
                 else obj.input_ids
             )
+            if ' pwd<s> pwd<s> pwd<s> pwd<' in input_text:
+                print("1111111111111 22222222222 Invalid input text.")
+                print('obj.text:', input_text)
+                print('len(input_ids):', len(input_ids))
+                print('tokenizer', self.tokenizer)
             if not not_use_index and obj.input_ids:
                 input_ids = obj.input_ids[index]
 

@@ -394,7 +394,12 @@ def sample_random_requests(
     if args.prefill_reorder:
         input_lens = np.arange(1, num_prompts + 1)
         output_lens = np.zeros(num_prompts, dtype=int)
-
+        
+    if args.decode_reorder:
+        input_lens = np.arange(1, num_prompts + 1)
+        output_lens = np.full(num_prompts, 5, dtype=int)
+    
+    
     if True:
         # Sample token ids from ShareGPT and repeat/truncate them to satisfy the input_lens
 
@@ -584,6 +589,9 @@ async def benchmark(
 
     print("Starting initial single prompt test run...")
     test_prompt, test_prompt_len, test_output_len = input_requests[0]
+    print(f"Prompt: {test_prompt}")
+    print(f"Prompt length: {test_prompt_len}")
+    print(f"Output length: {test_output_len}")
     test_input = RequestFuncInput(
         model=model_id,
         prompt=test_prompt,
@@ -1018,6 +1026,13 @@ if __name__ == "__main__":
         "--prefill-reorder",
         action="store_true",
         help="Prefill the reorder cache.",
+    )
+    
+    ## decode reordering args
+    parser.add_argument(
+        "--decode-reorder",
+        action="store_true",
+        help="Decode reordering.",
     )
 
     set_ulimit()

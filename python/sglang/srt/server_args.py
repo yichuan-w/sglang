@@ -23,6 +23,7 @@ from typing import List, Optional, Union
 
 @dataclasses.dataclass
 class ServerArgs:
+
     # Model and tokenizer
     model_path: str
     tokenizer_path: Optional[str] = None
@@ -59,6 +60,9 @@ class ServerArgs:
     log_level_http: Optional[str] = None
     log_requests: bool = False
     show_time_cost: bool = False
+    
+    # Offline policy
+    offline_policy: str = "random"
 
     # Other
     api_key: Optional[str] = None
@@ -191,6 +195,14 @@ class ServerArgs:
             type=int,
             default=ServerArgs.context_length,
             help="The model's maximum context length. Defaults to None (will use the value from the model's config.json instead).",
+        )
+        # add server policy
+        parser.add_argument(
+            "--offline_policy",
+            type=str,
+            default=ServerArgs.offline_policy,
+            choices=["lpm", "random", "dfs-weight","length","reverse_length"],
+            help="The scheduling policy of the requests.",
         )
         parser.add_argument(
             "--quantization",
