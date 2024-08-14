@@ -64,7 +64,7 @@ class BenchArgs:
     run_name: str = "before"
     batch_size: Tuple[int] = (1,)
     input_len: Tuple[int] = (1024,)
-    output_len: Tuple[int] = (4,)
+    output_len: Tuple[int] = (16,)
     result_filename: str = ""
     correctness_test: bool = False
     # This is only used for correctness test
@@ -152,7 +152,7 @@ def prepare_inputs_for_correctness_test(bench_args, tokenizer):
         req = Req(rid=i, origin_input_text=prompts[i], origin_input_ids=tmp_input_ids)
         req.prefix_indices = []
         req.sampling_params = sampling_params
-        req.input_ids = req.origin_input_ids
+        req.fill_ids = req.origin_input_ids
         reqs.append(req)
 
     return input_ids, reqs
@@ -163,7 +163,7 @@ def prepare_extend_inputs_for_correctness_test(
 ):
     for i in range(len(reqs)):
         req = reqs[i]
-        req.input_ids += input_ids[i][bench_args.cut_len :]
+        req.fill_ids += input_ids[i][bench_args.cut_len :]
         req.prefix_indices = model_runner.req_to_token_pool.req_to_token[
             i, : bench_args.cut_len
         ]
@@ -182,7 +182,7 @@ def prepare_synthetic_inputs_for_latency_test(batch_size, input_len):
         req = Req(rid=i, origin_input_text="", origin_input_ids=list(input_ids[i]))
         req.prefix_indices = []
         req.sampling_params = sampling_params
-        req.input_ids = req.origin_input_ids
+        req.fill_ids = req.origin_input_ids
         reqs.append(req)
 
     return reqs
@@ -195,7 +195,7 @@ def extend(reqs, model_runner):
         token_to_kv_pool=model_runner.token_to_kv_pool,
         tree_cache=None,
     )
-    batch.prepare_for_extend(model_runner.model_config.vocab_size, None)
+    batch.prepare_for_extend(model_runner.model_config.vocab_size)
     output = model_runner.forward(batch, ForwardMode.EXTEND)
     next_token_ids = batch.sample(output.next_token_logits)
     return next_token_ids, output.next_token_logits, batch
@@ -221,6 +221,7 @@ def correctness_test(
 
     # Prepare inputs
     input_ids, reqs = prepare_inputs_for_correctness_test(bench_args, tokenizer)
+    rank_print(f"{input_ids=}")
 
     if bench_args.cut_len > 0:
         # Prefill
@@ -238,7 +239,7 @@ def correctness_test(
 
     # Decode
     output_ids = [input_ids[i] + [next_token_ids[i]] for i in range(len(input_ids))]
-    for _ in range(bench_args.output_len):
+    for _ in range(bench_args.output_len[0]):
         next_token_ids, _ = decode(next_token_ids, batch, model_runner)
         for i in range(len(reqs)):
             output_ids[i].append(next_token_ids[i])
@@ -332,6 +333,7 @@ def latency_test(
     )
 
     # Warm up
+    rank_print("Warmup ...")
     latency_test_run_once(
         bench_args.run_name,
         model_runner,
@@ -341,6 +343,7 @@ def latency_test(
         bench_args.input_len[0],
         4,  # shorter decoding to speed up the warmup
     )
+    rank_print("Benchmark ...")
 
     # Run the sweep
     result_list = []

@@ -1,10 +1,10 @@
-import json
 import unittest
 
 import sglang as sgl
 from sglang.test.test_programs import (
     test_decode_int,
     test_decode_json_regex,
+    test_dtype_gen,
     test_expert_answer,
     test_few_shot_qa,
     test_mt_bench,
@@ -59,14 +59,9 @@ class TestSRTBackend(unittest.TestCase):
     def test_regex(self):
         test_regex()
 
+    def test_dtype_gen(self):
+        test_dtype_gen()
+
 
 if __name__ == "__main__":
-    unittest.main(warnings="ignore")
-
-    # from sglang.global_config import global_config
-
-    # global_config.verbosity = 2
-    # t = TestSRTBackend()
-    # t.setUpClass()
-    # t.test_few_shot_qa()
-    # t.tearDownClass()
+    unittest.main()

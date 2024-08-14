@@ -164,9 +164,9 @@ class LogitsProcessor(nn.Module):
         last_logits = last_logits[:, : self.config.vocab_size].float()
 
         if hasattr(self.config, "final_logit_softcapping"):
-            last_logits /= self.config.final_logit_softcapping
+            last_logits.div_(self.config.final_logit_softcapping)
             last_logits = torch.tanh(last_logits)
-            last_logits *= self.config.final_logit_softcapping
+            last_logits.mul_(self.config.final_logit_softcapping)
 
         # Return only last_logits if logprob is not requested
         if not logits_metadata.return_logprob:
@@ -207,6 +207,11 @@ class LogitsProcessor(nn.Module):
                 if self.tp_size > 1:
                     all_logits = tensor_model_parallel_all_gather(all_logits)
                 all_logits = all_logits[:, : self.config.vocab_size].float()
+
+                if hasattr(self.config, "final_logit_softcapping"):
+                    all_logits.div_(self.config.final_logit_softcapping)
+                    all_logits = torch.tanh(all_logits)
+                    all_logits.mul_(self.config.final_logit_softcapping)
 
                 all_logprobs = all_logits
                 del all_logits, hidden_states
