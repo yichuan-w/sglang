@@ -247,6 +247,7 @@ class ModelTpServer:
         new_batch = self.get_new_prefill_batch()
 
         if new_batch is not None:
+            print('Prefill batch')
             # Run a new prefill batch
             self.forward_prefill_batch(new_batch)
 
@@ -258,13 +259,14 @@ class ModelTpServer:
         else:
             # Run a decode batch
             if self.running_batch is not None:
+                print('Decode batch')
                 # Run a few decode batches continuously for reducing overhead
                 for _ in range(global_config.num_continue_decode_steps):
                     self.num_generated_tokens += len(self.running_batch.reqs)
                     self.forward_decode_batch(self.running_batch)
 
                     # Print stats
-                    if self.tp_rank == 0 and self.decode_forward_ct % 40 == 0:
+                    if self.tp_rank == 0 and self.decode_forward_ct % 1 == 0:
                         self.print_decode_stats()
 
                     if self.running_batch.is_empty():
@@ -411,6 +413,17 @@ class ModelTpServer:
                 or adder.no_remaining_tokens()
                 or running_bs + len(adder.can_run_list) >= self.max_running_requests
             ):
+                
+                ## print the reseaon of finishing
+                
+                if not res:
+                    print('res:', res)
+                if adder.no_remaining_tokens():
+                    print('no_remaining_tokens:', adder.no_remaining_tokens())
+                if running_bs + len(adder.can_run_list) >= self.max_running_requests:
+                    print('running_bs:', running_bs)
+                    print('can_run_list:', len(adder.can_run_list))
+                
                 # print('res:', res)
                 # print('remaining tokens:', adder.no_remaining_tokens())
                 # print('running bs:', running_bs)
@@ -639,6 +652,7 @@ class ModelTpServer:
 
         # Check finish condition
         for i, (req, next_token_id) in enumerate(zip(batch.reqs, next_token_ids)):
+        
             req.completion_tokens_wo_jump_forward += 1
             req.output_ids.append(next_token_id)
             req.check_finished()

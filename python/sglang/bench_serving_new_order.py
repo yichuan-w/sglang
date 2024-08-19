@@ -38,7 +38,21 @@ from transformers import (
 )
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=6 * 60 * 60)
+import numpy as np
+from scipy.stats import beta
 
+def generate_u_shaped_distribution(num_prompts, input_len, output_len, alpha=0.5, beta_param=0.5):
+    input_lens = beta.rvs(alpha, beta_param, size=num_prompts) * input_len
+    output_lens = beta.rvs(alpha, beta_param, size=num_prompts) * output_len
+    
+    input_lens = np.round(input_lens).astype(int)
+    output_lens = np.round(output_lens).astype(int)
+    
+    # Clip the values to be within the desired range
+    input_lens = np.clip(input_lens, 1, input_len)
+    output_lens = np.clip(output_lens, 1, output_len)
+    
+    return input_lens, output_lens
 
 @dataclass
 class RequestFuncInput:
@@ -395,10 +409,21 @@ def sample_random_requests(
         input_lens = np.arange(1, num_prompts + 1)
         output_lens = np.zeros(num_prompts, dtype=int)
         
-    if args.decode_reorder:
-        input_lens = np.arange(1, num_prompts + 1)
+    elif args.decode_reorder:
+        input_lens = np.arange(1, num_prompts + 1) * 2
         output_lens = np.full(num_prompts, 5, dtype=int)
-    
+        
+    elif args.decode_different_len_reorder:
+        input_lens = np.arange(1, num_prompts + 1)
+        output_lens = np.arange(1, num_prompts + 1)
+
+    elif args.U_distribution:
+        input_lens, output_lens = generate_u_shaped_distribution(num_prompts, input_len, output_len)
+        print("Input lengths (U-shaped):", input_lens[:10])
+        print("Output lengths (U-shaped):", output_lens[:10])
+    elif args.same_prefill_different_decode:
+        input_lens= np.full(num_prompts, 50, dtype=int)
+        output_lens = np.arange(1, num_prompts + 1)
     
     if True:
         # Sample token ids from ShareGPT and repeat/truncate them to satisfy the input_lens
@@ -1034,6 +1059,18 @@ if __name__ == "__main__":
         action="store_true",
         help="Decode reordering.",
     )
+    
+    ## add decode_different_len_reorder
+    parser.add_argument(
+        "--decode-different-len-reorder",
+        action="store_true",
+        help="Decode different length reordering.",
+    )
+    # add U_distribution
+    parser.add_argument(
+        "--U-distribution",
+        action="store_true",
+        help="U-shaped distribution.",)
 
     set_ulimit()
 

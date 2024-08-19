@@ -195,13 +195,16 @@ class PrefillAdder:
         prefix_len = len(req.prefix_indices)
 
         if total_tokens >= self.rem_total_tokens:
+            print('total_tokens >= self.rem_total_tokens')
             return False
 
         if input_tokens > self.rem_input_tokens and len(self.can_run_list) != 0:
+            print('input_tokens > self.rem_input_tokens and len(self.can_run_list) != 0')
             return False
 
         with self._lock_node(req.last_node):
             if total_tokens > self.rem_total_tokens:
+                print('total_tokens > self.rem_total_tokens')
                 return False
 
             if (
