@@ -138,6 +138,7 @@ class ControllerMulti:
 
     def round_robin_scheduler(self, input_requests):
         for r in input_requests:
+            print('self.round_robin_counter', self.round_robin_counter)
             self.workers[self.round_robin_counter].queue.put(r)
             self.round_robin_counter = (self.round_robin_counter + 1) % len(
                 self.workers

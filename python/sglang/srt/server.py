@@ -294,6 +294,7 @@ def launch_server(
     if server_args.dp_size == 1:
         start_process = start_controller_process_single
     else:
+        print("Starting multi-node tensor parallelism.")
         start_process = start_controller_process_multi
     proc_controller = mp.Process(
         target=start_process,

@@ -823,6 +823,8 @@ def run_tp_server(
             model_overide_args,
         )
         tp_cpu_group = model_server.model_runner.tp_group.cpu_group
+        print('tp_cpu_group:', tp_cpu_group)
+        import traceback;traceback.print_stack()
 
         while True:
             recv_reqs = broadcast_recv_input(None, tp_rank, tp_cpu_group)
