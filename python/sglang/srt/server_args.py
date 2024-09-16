@@ -363,6 +363,7 @@ class ServerArgs:
             choices=[
                 "round_robin",
                 "shortest_queue",
+                "partition_by_req",
             ],
         )
 

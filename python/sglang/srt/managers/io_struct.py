@@ -166,6 +166,7 @@ class TokenizedGenerateReqInput:
     logprob_start_len: int
     top_logprobs_num: int
     stream: bool
+    dp_worker_id: int = 0
 
 
 @dataclass

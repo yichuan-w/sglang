@@ -47,6 +47,7 @@ class LoadBalanceMethod(Enum):
 
     ROUND_ROBIN = auto()
     SHORTEST_QUEUE = auto()
+    PARTITION_BY_REQ = auto()
 
     @classmethod
     def from_str(cls, method: str):
@@ -92,6 +93,7 @@ class ControllerMulti:
         dispatch_lookup = {
             LoadBalanceMethod.ROUND_ROBIN: self.round_robin_scheduler,
             LoadBalanceMethod.SHORTEST_QUEUE: self.shortest_queue_scheduler,
+            LoadBalanceMethod.PARTITION_BY_REQ: self.partition_by_req_scheduler,
         }
         self.dispatching = dispatch_lookup[self.load_balance_method]
 
@@ -135,6 +137,9 @@ class ControllerMulti:
                 queue=queue,
             )
         )
+    def partition_by_req_scheduler(self, input_requests):
+        for r in input_requests:
+            self.workers[r.dp_worker_id].queue.put(r)
 
     def round_robin_scheduler(self, input_requests):
         for r in input_requests:
@@ -151,8 +156,12 @@ class ControllerMulti:
             self.workers[wid].queue.put(r)
 
     def loop_for_forward(self):
+        offline_collected=False
+        
         while True:
             recv_reqs = self.recv_requests()
+            if len(recv_reqs)>0:
+                print('len of recv_reqs', len(recv_reqs))
             self.dispatching(recv_reqs)
 
     def recv_requests(self):

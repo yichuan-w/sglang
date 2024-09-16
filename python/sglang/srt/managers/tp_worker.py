@@ -407,6 +407,11 @@ class ModelTpServer:
 
         for req in self.waiting_queue:
             req.init_next_round_input(None if prefix_computed else self.tree_cache)
+            # print('****************** req *********',req)
+            # print(' req extend_input_len',req.extend_input_len)
+            # print(' req sampling_params.max_new_tokens',req.sampling_params.max_new_tokens)
+            # print(' req origin_input_ids',req.origin_input_ids)
+
             res = adder.add_one_req(req)
             if (
                 not res

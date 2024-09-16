@@ -96,6 +96,8 @@ class ControllerSingle:
                 recv_reqs = self.recv_requests_from_zmq()
             else:
                 recv_reqs = self.recv_requests_from_mp_queue()
+                if len(recv_reqs) >0:
+                    print('in dp_worker_id len of recv_reqs in single controller ', self.dp_worker_id, len(recv_reqs))
 
             if self.tp_size > 1:
                 broadcast_recv_input(recv_reqs, 0, self.tp_cpu_group)

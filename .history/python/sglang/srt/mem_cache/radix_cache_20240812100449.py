@@ -257,7 +257,7 @@ class RadixCache(BasePrefixCache):
 
     def _print_helper(self, node: TreeNode, indent):
         for _, child in node.children.items():
-            print(" " * indent, len(child.key), child.key[:10], f"r={child.lock_ref}")
+            print(" " * indent, len(child.key), child.key[:30], f"r={child.lock_ref}")
             self._print_helper(child, indent=indent + 2)
 
     def _delete_leaf(self, node):
@@ -293,8 +293,8 @@ if __name__ == "__main__":
     tree.insert("Hello")
     tree.insert("Hello")
     tree.insert("Hello_L.A.!")
-    # tree.insert("Hello_world! Happy")
-    # tree.insert("I love you!")
+    tree.insert("Hello_world! Happy")
+    tree.insert("I love you!")
     tree.pretty_print()
 
     # print(tree.match_prefix("I love you! aha"))

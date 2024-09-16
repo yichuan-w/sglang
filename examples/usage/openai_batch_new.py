@@ -20,7 +20,7 @@ from openai import OpenAI
 class OpenAIBatchProcessor:
     def __init__(self, api_key):
         # client = OpenAI(api_key=api_key)
-        client = openai.Client(base_url="http://127.0.0.1:30000/v1", api_key="EMPTY")
+        client = openai.Client(base_url="http://127.0.0.1:40000/v1", api_key="EMPTY")
 
         self.client = client
 
@@ -68,7 +68,7 @@ class OpenAIBatchProcessor:
             result_content = file_response.read()  # Read the content of the file
 
             # Save the content to a local file
-            result_file_name = "batch_job_complete_results.jsonl"
+            result_file_name = "batch_job_complete_results_new.jsonl"
             with open(result_file_name, "wb") as file:
                 file.write(result_content)  # Write the binary content to the file
             # Load data from the saved JSONL file

@@ -52,6 +52,8 @@ from sglang.srt.sampling_params import SamplingParams
 from sglang.srt.server_args import PortArgs, ServerArgs
 from sglang.srt.utils import is_generation_model, is_multimodal_model, load_image
 from sglang.utils import get_exception_traceback
+from sglang.srt.managers.host_cache import RadixCacheHost,partition_req_and_construct_trees,partition_by_prefill_len
+
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -120,6 +122,10 @@ class TokenizerManager:
 
         self.to_create_loop = True
         self.rid_to_state: Dict[str, ReqState] = {}
+        self.radix_cache_host = RadixCacheHost(grouping_threshold=1)
+        print(f"self.server_args.load_balance_mode {self.server_args.load_balance_method}")
+        print(f"self.server_args.dp_size {self.server_args.dp_size}")
+        
 
     async def get_pixel_values(self, image_data):
         aspect_ratio = getattr(self.hf_config, "image_aspect_ratio", None)
@@ -201,6 +207,8 @@ class TokenizerManager:
                 )
         else:  # A prefill request to cache the common prompt for parallel sampling
             assert self.is_generation
+            print('****************** prefill *********')
+            print(f"obj.text {obj.text}")
             if obj.text is not None:
                 if isinstance(obj.text, list):
                     input_text = obj.text[index]
@@ -283,6 +291,11 @@ class TokenizerManager:
     async def _handle_batch_request(
         self, obj: Union[GenerateReqInput, EmbeddingReqInput], request
     ):
+        profile_ahead=True
+        print(f"self.server_args.load_balance_mode {self.server_args.load_balance_method}")
+        print(f"self.server_args.dp_size {self.server_args.dp_size}")
+        if self.server_args.load_balance_method == "round_robin":
+            profile_ahead=False
         batch_size = obj.batch_size
         if self.is_generation:
             parallel_sample_num = obj.parallel_sample_num
@@ -303,6 +316,8 @@ class TokenizerManager:
                     obj.input_ids = input_id_result[0]
         else:
             parallel_sample_num = 1
+        rids_list = []
+        request_obj_list = []
 
         # First send out all requests
         for i in range(batch_size):
@@ -357,12 +372,94 @@ class TokenizerManager:
                         input_ids,
                         sampling_params,
                     )
-                self.send_to_router.send_pyobj(tokenized_obj)
+                if profile_ahead:
+                    request_obj_list.append(tokenized_obj)
+                    rids_list.append(rid)
+                else:
+                    self.send_to_router.send_pyobj(tokenized_obj)
 
-                event = asyncio.Event()
-                state = ReqState([], False, event)
-                self.rid_to_state[rid] = state
+                    event = asyncio.Event()
+                    state = ReqState([], False, event)
+                    self.rid_to_state[rid] = state
 
+
+        if profile_ahead:
+            print('xxxxx')
+            # print all input ids
+            central_tree=RadixCacheHost()
+            all_input_ids=[]
+            for i,request_obj in enumerate(request_obj_list):
+                all_input_ids.append(request_obj.input_ids)
+                central_tree.match_prefix(tuple(request_obj.input_ids), i)
+            # central_tree.pretty_print()
+            dfs_list,dfs_request_list,req_num,req_prefill_len_intotal,req_prefill_len_times_reqnum_intotal,dfs_prefix_len_list,dfs_prefix_len_times_reqnum_list = central_tree.get_dfs_order_list(central_tree.root_node)
+            # print(f"req_num {req_num}")
+            # print(f"req_prefill_len_intotal {req_prefill_len_intotal}")
+            # print(f"req_prefill_len_times_reqnum_intotal {req_prefill_len_times_reqnum_intotal}")
+            # print(f"dfs_prefix_len_list {dfs_prefix_len_list}")
+            # print(f"dfs_prefix_len_times_reqnum_list {dfs_prefix_len_times_reqnum_list}")
+            dfs_list_new=[]
+            for i in range(len(dfs_request_list)):
+                if len(dfs_request_list[i]) > 0:
+                    for j in range(len(dfs_request_list[i])):
+                        dfs_list_new.append(dfs_request_list[i][j])
+            mode_list = ["partition_by_req","round_robin","partation_by_req_prefill_len","partation_by_req_prefill_len_times_reqnum"]
+            mode=mode_list[0]
+            if mode == "partation_by_req_prefill_len":
+                sub_trees, subtree_req_ids = partition_by_prefill_len(dfs_request_list,dfs_prefix_len_list, all_input_ids, dfs_list_new, req_prefill_len_intotal, self.server_args.dp_size)
+
+            elif mode == "partation_by_req_prefill_len_times_reqnum":
+                sub_trees, subtree_req_ids = partition_by_prefill_len(dfs_request_list,dfs_prefix_len_list, all_input_ids, dfs_list_new, req_prefill_len_intotal, self.server_args.dp_size)
+            elif mode == "partition_by_req":
+                sub_trees, subtree_req_ids = partition_req_and_construct_trees(dfs_list_new,all_input_ids, self.server_args.dp_size)
+            print('xxxxxx')
+            # print(f"subtree_req_ids {subtree_req_ids}")
+            for i in range(len(subtree_req_ids)):
+                for r in subtree_req_ids[i]:
+                    request_obj_list[r].dp_worker_id=i
+                sub_tree=sub_trees[i]
+                # sub_tree.pretty_print()
+            orihinal_order=False
+            if orihinal_order:
+                matched_group=[]
+                cnt=0
+                for i in range(batch_size):
+                    for j in range(parallel_sample_num):
+                        if j == 0 and parallel_sample_num != 1:
+                            continue
+                        request_obj=request_obj_list.pop(0)
+                        input_ids=request_obj.input_ids
+                        # print(f"input_ids {input_ids}")
+                        # matched_workers, matched_request_group = self.radix_cache_host.match_prefix(
+                        #     tuple(request_obj.input_ids), request_id=cnt
+                        # )
+                        # print(f"matched {matched_workers} workers")
+                        # print(f"matched request group {matched_request_group}")
+                        # matched_group.append(matched_request_group)
+                        cnt+=1
+                        self.send_to_router.send_pyobj(request_obj)
+                        event = asyncio.Event()
+                        state = ReqState([], False, event)
+                        self.rid_to_state[rids_list.pop(0)] = state
+            else:
+                matched_group=[]
+                cnt=0
+                for i in range(batch_size):
+                    for j in range(parallel_sample_num):
+                        if j == 0 and parallel_sample_num != 1:
+                            continue
+                        request_obj=request_obj_list.pop(0)
+                        input_ids=request_obj.input_ids
+                        # print(f"input_ids {input_ids}")
+                        # print(f"request obj dp id {request_obj.dp_worker_id}")
+                        cnt+=1
+                        self.send_to_router.send_pyobj(request_obj)
+                        event = asyncio.Event()
+                        state = ReqState([], False, event)
+                        self.rid_to_state[rids_list.pop(0)] = state
+            assert len(request_obj_list) == 0
+            assert len(rids_list) == 0
+            print(f"send {cnt} requests")
         # Then wait for all responses
         output_list = []
         for i in range(batch_size):
