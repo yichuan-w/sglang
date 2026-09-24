@@ -1,0 +1,23 @@
+[2026-09-24 05:03:54] The server is fired up and ready to roll!
+[2026-09-24 05:00:47 TP0] KV Cache is allocated. dtype: torch.bfloat16, #tokens: 309184, K size: 94.38 GB, V size: 94.38 GB
+[2026-09-24 05:00:47 TP1] KV Cache is allocated. dtype: torch.bfloat16, #tokens: 309184, K size: 94.38 GB, V size: 94.38 GB
+{"tag": "iq_tp2_base", "dataset": "gsm8k", "conc": 1, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 8533, "wall_s": 191.9, "throughput_tok_s": 44.5, "per_req_tok_s": 44.4, "accept_len": null, "gsm8k_acc": 0.719}
+{"tag": "iq_tp2_base", "dataset": "gsm8k", "conc": 4, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 8503, "wall_s": 55.9, "throughput_tok_s": 152.1, "per_req_tok_s": 40.7, "accept_len": null, "gsm8k_acc": 0.719}
+{"tag": "iq_tp2_base", "dataset": "gsm8k", "conc": 16, "n": 64, "temp": 0.0, "max_tokens": 1024, "out_tokens": 16140, "wall_s": 32.9, "throughput_tok_s": 491.3, "per_req_tok_s": 37.8, "accept_len": null, "gsm8k_acc": 0.766}
+{"tag": "iq_tp2_base", "dataset": "gsm8k", "conc": 64, "n": 256, "temp": 0.0, "max_tokens": 1024, "out_tokens": 63516, "wall_s": 40.8, "throughput_tok_s": 1555.6, "per_req_tok_s": 29.2, "accept_len": null, "gsm8k_acc": 0.871}
+{"tag": "iq_tp2_base", "dataset": "humaneval", "conc": 1, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 7130, "wall_s": 167.8, "throughput_tok_s": 42.5, "per_req_tok_s": 42.4, "accept_len": null}
+{"tag": "iq_tp2_base", "dataset": "humaneval", "conc": 4, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 7120, "wall_s": 49.6, "throughput_tok_s": 143.7, "per_req_tok_s": 38.8, "accept_len": null}
+{"tag": "iq_tp2_base", "dataset": "humaneval", "conc": 16, "n": 64, "temp": 0.0, "max_tokens": 1024, "out_tokens": 14653, "wall_s": 30.7, "throughput_tok_s": 477.0, "per_req_tok_s": 36.1, "accept_len": null}
+{"tag": "iq_tp2_base", "dataset": "humaneval", "conc": 64, "n": 164, "temp": 0.0, "max_tokens": 1024, "out_tokens": 51411, "wall_s": 47.9, "throughput_tok_s": 1073.8, "per_req_tok_s": 28.3, "accept_len": null}
+[2026-09-24 05:19:30] The server is fired up and ready to roll!
+[2026-09-24 05:17:25 TP1] KV Cache is allocated. dtype: torch.bfloat16, #tokens: 309209, K size: 94.36 GB, V size: 94.36 GB
+[2026-09-24 05:17:25 TP0] KV Cache is allocated. dtype: torch.bfloat16, #tokens: 309209, K size: 94.36 GB, V size: 94.36 GB
+{"tag": "iq_tp2_ngram", "dataset": "gsm8k", "conc": 1, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 8711, "wall_s": 134.6, "throughput_tok_s": 64.7, "per_req_tok_s": 65.4, "accept_len": 2.01, "gsm8k_acc": 0.781}
+{"tag": "iq_tp2_ngram", "dataset": "gsm8k", "conc": 4, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 8762, "wall_s": 41.4, "throughput_tok_s": 211.5, "per_req_tok_s": 55.8, "accept_len": 2.05, "gsm8k_acc": 0.75}
+{"tag": "iq_tp2_ngram", "dataset": "gsm8k", "conc": 16, "n": 64, "temp": 0.0, "max_tokens": 1024, "out_tokens": 16853, "wall_s": 37.8, "throughput_tok_s": 446.1, "per_req_tok_s": 38.8, "accept_len": 1.92, "gsm8k_acc": 0.797}
+{"tag": "iq_tp2_ngram", "dataset": "gsm8k", "conc": 64, "n": 256, "temp": 0.0, "max_tokens": 1024, "out_tokens": 63658, "wall_s": 76.1, "throughput_tok_s": 836.3, "per_req_tok_s": 15.1, "accept_len": 1.91, "gsm8k_acc": 0.855}
+{"tag": "iq_tp2_ngram", "dataset": "humaneval", "conc": 1, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 7073, "wall_s": 98.3, "throughput_tok_s": 72.0, "per_req_tok_s": 75.6, "accept_len": 2.26}
+{"tag": "iq_tp2_ngram", "dataset": "humaneval", "conc": 4, "n": 32, "temp": 0.0, "max_tokens": 1024, "out_tokens": 7191, "wall_s": 32.0, "throughput_tok_s": 224.6, "per_req_tok_s": 63.1, "accept_len": 2.22}
+{"tag": "iq_tp2_ngram", "dataset": "humaneval", "conc": 16, "n": 64, "temp": 0.0, "max_tokens": 1024, "out_tokens": 14615, "wall_s": 23.7, "throughput_tok_s": 616.0, "per_req_tok_s": 45.3, "accept_len": 2.31}
+{"tag": "iq_tp2_ngram", "dataset": "humaneval", "conc": 64, "n": 164, "temp": 0.0, "max_tokens": 1024, "out_tokens": 51801, "wall_s": 58.3, "throughput_tok_s": 889.1, "per_req_tok_s": 18.2, "accept_len": 2.18}
+TP2_DONE

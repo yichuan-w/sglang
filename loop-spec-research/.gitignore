@@ -1,0 +1,12 @@
+# Upstream LoopSpec clone (nested git repo). Re-create with:
+#   git clone https://github.com/kaist-flexml-lab/loopspec related_work/loopspec-code && git -C related_work/loopspec-code checkout 41aa710
+related_work/loopspec-code/
+__pycache__/
+
+# The repo-root .gitignore drops *.log / *.jsonl / *.out; keep experiment data here.
+!*.log
+!*.jsonl
+!*.out
+!*.err
+# Paper PDFs are not redistributed; see the arXiv links in README.md.
+*.pdf

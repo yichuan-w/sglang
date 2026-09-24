@@ -1,0 +1,4 @@
+{"tag": "acc_nb_dspark7", "dataset": "gsm8k", "conc": 48, "n": 500, "temp": 0.0, "max_tokens": 8192, "out_tokens": 797093, "wall_s": 248.6, "throughput_tok_s": 3206.3, "per_req_tok_s": 84.5, "accept_len": 4.05, "gsm8k_acc": 0.936}
+{"tag": "acc_nb_base", "dataset": "gsm8k", "conc": 48, "n": 500, "temp": 0.0, "max_tokens": 8192, "out_tokens": 794336, "wall_s": 261.5, "throughput_tok_s": 3037.5, "per_req_tok_s": 73.9, "accept_len": null, "gsm8k_acc": 0.936}
+{"tag": "acc_nb_dspark7", "dataset": "gsm8k", "conc": 48, "n": 500, "temp": 0.6, "max_tokens": 8192, "out_tokens": 794883, "wall_s": 287.2, "throughput_tok_s": 2767.7, "per_req_tok_s": 75.3, "accept_len": 3.94, "gsm8k_acc": 0.934}
+{"tag": "acc_nb_base", "dataset": "gsm8k", "conc": 48, "n": 500, "temp": 0.6, "max_tokens": 8192, "out_tokens": 776173, "wall_s": 286.2, "throughput_tok_s": 2711.7, "per_req_tok_s": 71.7, "accept_len": null, "gsm8k_acc": 0.94}

@@ -1,0 +1,8 @@
+{"port": 30101, "conc": 16, "n": 64, "temp": 0.0, "out_tokens": 54665, "throughput_tok_s": 5468.8, "per_req_tok_s": 423.7}
+{"port": 30100, "conc": 16, "n": 64, "temp": 0.0, "out_tokens": 54715, "throughput_tok_s": 3710.3, "per_req_tok_s": 262.3}
+{"port": 30103, "conc": 16, "n": 64, "temp": 0.0, "out_tokens": 55561, "throughput_tok_s": 1722.4, "per_req_tok_s": 137.1}
+{"port": 30101, "conc": 64, "n": 256, "temp": 0.0, "out_tokens": 215943, "throughput_tok_s": 13060.8, "per_req_tok_s": 235.5}
+{"port": 30100, "conc": 64, "n": 256, "temp": 0.0, "out_tokens": 216615, "throughput_tok_s": 11212.2, "per_req_tok_s": 201.1}
+{"port": 30103, "conc": 64, "n": 256, "temp": 0.0, "out_tokens": 216316, "throughput_tok_s": 3915.7, "per_req_tok_s": 79.4}
+{"port": 30101, "conc": 1, "n": 16, "temp": 0.6, "out_tokens": 14185, "throughput_tok_s": 429.6, "per_req_tok_s": 429.5}
+{"port": 30100, "conc": 1, "n": 16, "temp": 0.6, "out_tokens": 14171, "throughput_tok_s": 278.5, "per_req_tok_s": 278.4}

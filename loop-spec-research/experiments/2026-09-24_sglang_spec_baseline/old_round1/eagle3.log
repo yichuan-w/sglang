@@ -1,0 +1,38 @@
+/ssd1/k3/yichuan/sglang/python/sglang/launch_server.py:71: UserWarning: 'python -m sglang.launch_server' is still supported, but 'sglang serve' is the recommended entrypoint.
+  Example: sglang serve --model-path <model> [options]
+  warnings.warn(
+[2026-09-24 02:19:49] Registered linear attn model: config=GigaChat35Config, backend=GDNAttnBackend, archs=['GigaChat35ForCausalLM', 'GigaChat35ForCausalLMNextN']
+[2026-09-24 02:19:52] Attention backend not specified. Use trtllm_mha backend by default.
+[2026-09-24 02:19:52] TensorRT-LLM MHA only supports page_size of 16, 32, 64 or 128, changing page_size from None to 64.
+[2026-09-24 02:19:52] kill_process_tree called: parent_pid=139013, include_parent=False, pid=139013
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/ssd1/k3/yichuan/sglang/python/sglang/launch_server.py", line 84, in <module>
+    run_server(server_args)
+  File "/ssd1/k3/yichuan/sglang/python/sglang/launch_server.py", line 29, in run_server
+    server_args.resolve_once()
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/server_args.py", line 246, in resolve_once
+    run_resolution_pipeline(self)
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/arg_groups/pipeline.py", line 285, in run_resolution_pipeline
+    run_hook(handle_speculative_decoding, server_args)
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/arg_groups/resolution_hooks.py", line 134, in run_hook
+    step(server_args)
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/arg_groups/speculative_hook.py", line 153, in handle_speculative_decoding
+    speculative_algorithm=_resolve_speculative_algorithm_alias(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/arg_groups/speculative_hook.py", line 92, in _resolve_speculative_algorithm_alias
+    cfg = get_config(
+          ^^^^^^^^^^^
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/utils/common.py", line 4446, in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/utils/hf_transformers/config.py", line 320, in get_config
+    config = parser.parse(
+             ^^^^^^^^^^^^^
+  File "/ssd1/k3/yichuan/sglang/python/sglang/srt/utils/hf_transformers/config.py", line 135, in parse
+    config = AutoConfig.from_pretrained(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ssd1/k3/yichuan/venvs/sglang-main/lib/python3.12/site-packages/transformers/models/auto/configuration_auto.py", line 421, in from_pretrained
+    raise ValueError(
+ValueError: Unrecognized model in NullSense/Nanbeige4.2-3B-EAGLE3. Should have a `model_type` key in its config.json.
