@@ -1,0 +1,12 @@
+nb_tp2 c=1 Output token throughput (tok/s):         276.99    
+nb_tp2 c=1 Median TTFT (ms):                        26.03     
+nb_tp2 c=1 Median TPOT (ms):                        3.55      
+nb_tp2 c=16 Output token throughput (tok/s):         3503.41   
+nb_tp2 c=16 Median TTFT (ms):                        104.31    
+nb_tp2 c=16 Median TPOT (ms):                        4.36      
+nb_tp2 c=64 Output token throughput (tok/s):         10376.83  
+nb_tp2 c=64 Median TTFT (ms):                        302.48    
+nb_tp2 c=64 Median TPOT (ms):                        5.58      
+nb_tp2 c=256 Output token throughput (tok/s):         14586.89  
+nb_tp2 c=256 Median TTFT (ms):                        1079.89   
+nb_tp2 c=256 Median TPOT (ms):                        15.54     

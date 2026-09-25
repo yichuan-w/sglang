@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from sglang.srt.configs import NanbeigeConfig
+from sglang.srt.distributed import get_pp_indices
 from sglang.srt.layers.activation import SiluAndMul
 from sglang.srt.layers.dp_attention import is_dp_attention_enabled
 from sglang.srt.layers.layernorm import RMSNorm
@@ -26,7 +27,7 @@ from sglang.srt.layers.vocab_parallel_embedding import (
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTensors
 from sglang.srt.model_loader.weight_utils import default_weight_loader
 from sglang.srt.runtime_context import get_parallel
-from sglang.srt.utils import add_prefix, make_layers
+from sglang.srt.utils import add_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,6 @@ class NanbeigeAttention(nn.Module):
         self.rope_theta = config.rope_theta
         self.is_causal = True
         self.scaling = self.head_dim**-0.5
-        self.total_layers = config.num_hidden_layers
-        self.num_loops = config.num_loops
 
         self.qkv_proj = QKVParallelLinear(
             self.hidden_size,
@@ -152,22 +151,6 @@ class NanbeigeAttention(nn.Module):
             prefix=add_prefix("o_proj", prefix),
         )
 
-        self.attn = nn.ModuleList()
-        base_layer_id = layer_id
-        for loop_idx in range(self.num_loops):
-            layer_id = base_layer_id + loop_idx * self.total_layers
-            self.attn.append(
-                RadixAttention(
-                    self.num_heads,
-                    self.head_dim,
-                    self.scaling,
-                    num_kv_heads=self.num_kv_heads,
-                    layer_id=layer_id,
-                    quant_config=quant_config,
-                    prefix=add_prefix("attn", prefix),
-                )
-            )
-
         self.rotary_emb = get_rope(
             self.head_dim,
             rotary_dim=self.head_dim,
@@ -181,12 +164,12 @@ class NanbeigeAttention(nn.Module):
         positions: torch.Tensor,
         hidden_states: torch.Tensor,
         forward_batch: ForwardBatch,
-        loop_idx: int,
+        attn: RadixAttention,
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
         q, k = self.rotary_emb(positions, q, k)
-        attn_output = self.attn[loop_idx](q, k, v, forward_batch)
+        attn_output = attn(q, k, v, forward_batch)
         output, _ = self.o_proj(attn_output)
         return output
 
@@ -226,7 +209,7 @@ class NanbeigeDecoderLayer(nn.Module):
         positions: torch.Tensor,
         hidden_states: torch.Tensor,
         forward_batch: ForwardBatch,
-        loop_idx: int,
+        attn: RadixAttention,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
@@ -239,7 +222,7 @@ class NanbeigeDecoderLayer(nn.Module):
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
-            loop_idx=loop_idx,
+            attn=attn,
         )
 
         # Fully Connected
@@ -247,6 +230,57 @@ class NanbeigeDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
 
         return hidden_states, residual
+
+
+class _NanbeigeStepAttention(nn.Module):
+    # Layer discovery (layer_setup.compute_attention_and_moe_layers) reads layer.self_attn.attn.
+    def __init__(self, attn: RadixAttention) -> None:
+        super().__init__()
+        self.attn = attn
+
+
+class NanbeigeLoopStep(nn.Module):
+    """One unrolled depth step: a shared physical layer run with this step's own KV cache."""
+
+    def __init__(
+        self,
+        *,
+        physical_layer: NanbeigeDecoderLayer,
+        step_id: int,
+        quant_config: Optional[QuantizationConfig],
+        prefix: str,
+    ) -> None:
+        super().__init__()
+        # Not registered as a submodule: the weights belong to NanbeigeModel.physical_layers
+        # and are shared by every loop, so they must be named and loaded exactly once.
+        self.__dict__["physical_layer"] = physical_layer
+        shape = physical_layer.self_attn
+        self.self_attn = _NanbeigeStepAttention(
+            RadixAttention(
+                shape.num_heads,
+                shape.head_dim,
+                shape.scaling,
+                num_kv_heads=shape.num_kv_heads,
+                layer_id=step_id,
+                quant_config=quant_config,
+                prefix=add_prefix("attn", prefix),
+            )
+        )
+
+    def forward(
+        self,
+        positions: torch.Tensor,
+        hidden_states: torch.Tensor,
+        forward_batch: ForwardBatch,
+        residual: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        return self.physical_layer(
+            positions=positions,
+            hidden_states=hidden_states,
+            forward_batch=forward_batch,
+            attn=self.self_attn.attn,
+            residual=residual,
+        )
 
 
 class NanbeigeModel(nn.Module):
@@ -262,10 +296,7 @@ class NanbeigeModel(nn.Module):
         self.config = config
         self.vocab_size = config.vocab_size
         self.pp_group = get_parallel().pp_group
-        pp_size = self.pp_group.world_size
-        assert pp_size == 1, (
-            "The NanbeigeModel only supports a pipeline parallelism (PP) value of 1."
-        )
+        self.num_physical_layers = config.num_hidden_layers
 
         if self.pp_group.is_first_rank:
             self.embed_tokens = VocabParallelEmbedding(
@@ -278,22 +309,54 @@ class NanbeigeModel(nn.Module):
         else:
             self.embed_tokens = PPMissingLayer()
 
+        # Pipeline stages split the unrolled depth (num_hidden_layers * num_loops steps),
+        # so with pp_size == num_loops each rank runs one whole loop over the full weights.
+        num_steps = self.num_physical_layers * config.num_loops
+        self.start_layer, self.end_layer = get_pp_indices(
+            num_steps, self.pp_group.rank_in_group, self.pp_group.world_size
+        )
+        local_steps = range(self.start_layer, self.end_layer)
+        needed_physical = {step % self.num_physical_layers for step in local_steps}
+
         # Use the provided decoder layer type or default to NanbeigeDecoderLayer
         decoder_layer_type = decoder_layer_type or NanbeigeDecoderLayer
-        self.layers, self.start_layer, self.end_layer = make_layers(
-            config.num_hidden_layers,
-            lambda idx, prefix: decoder_layer_type(
-                layer_id=idx,
-                config=config,
-                quant_config=quant_config,
-                prefix=prefix,
-                alt_stream=alt_stream,
-            ),
-            pp_rank=self.pp_group.rank_in_group,
-            pp_size=self.pp_group.world_size,
-            prefix=add_prefix("layers", prefix),
+        self.physical_layers = nn.ModuleList(
+            [
+                (
+                    decoder_layer_type(
+                        layer_id=idx,
+                        config=config,
+                        quant_config=quant_config,
+                        prefix=add_prefix(idx, add_prefix("layers", prefix)),
+                        alt_stream=alt_stream,
+                    )
+                    if idx in needed_physical
+                    else PPMissingLayer()
+                )
+                for idx in range(self.num_physical_layers)
+            ]
         )
-        if self.pp_group.is_last_rank:
+        self.layers = nn.ModuleList(
+            [
+                (
+                    NanbeigeLoopStep(
+                        physical_layer=self.physical_layers[
+                            step % self.num_physical_layers
+                        ],
+                        step_id=step,
+                        quant_config=quant_config,
+                        prefix=add_prefix(step, add_prefix("steps", prefix)),
+                    )
+                    if step in local_steps
+                    else PPMissingLayer()
+                )
+                for step in range(num_steps)
+            ]
+        )
+        # The norm also runs between loops, so a rank that starts any loop past the first needs it.
+        if self.pp_group.is_last_rank or any(
+            self._is_loop_start(step) for step in local_steps
+        ):
             self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         else:
             self.norm = PPMissingLayer(return_tuple=True)
@@ -303,6 +366,20 @@ class NanbeigeModel(nn.Module):
 
     def get_input_embedding(self, input_ids):
         return self.embed_tokens(input_ids)
+
+    def _is_loop_start(self, step: int) -> bool:
+        return step > 0 and step % self.num_physical_layers == 0
+
+    def _enter_next_loop(
+        self, *, hidden_states: torch.Tensor, residual: Optional[torch.Tensor]
+    ) -> Tuple[torch.Tensor, None]:
+        # Matches HF Nanbeige: fold the pending residual, then RMSNorm unless
+        # skip_loop_final_norm, before the next loop consumes the state.
+        if residual is not None:
+            hidden_states = hidden_states + residual
+        if not self.config.skip_loop_final_norm:
+            hidden_states = self.norm(hidden_states)
+        return hidden_states, None
 
     def forward(
         self,
@@ -324,41 +401,22 @@ class NanbeigeModel(nn.Module):
             residual = pp_proxy_tensors["residual"]
 
         aux_hidden_states = []
-        # Draft target_layer_ids are in unrolled depth space:
-        #   logical_id = loop_idx * num_hidden_layers + physical_i
-        # e.g. num_hidden_layers=22, num_loops=2 → ids in [0, 44).
-        # DFLASH style: setter stores k+1; we capture before that unrolled step.
-        num_physical_layers = self.config.num_hidden_layers
-        for loop_idx in range(self.config.num_loops):
-            for i in range(self.start_layer, self.end_layer):
-                logical_id = loop_idx * num_physical_layers + i
-                if logical_id in self.layers_to_capture:
-                    aux_hidden_states.append(
-                        hidden_states + residual
-                        if residual is not None
-                        else hidden_states.clone()
-                    )
-                layer = self.layers[i]
-                hidden_states, residual = layer(
-                    positions,
-                    hidden_states,
-                    forward_batch,
-                    loop_idx,
-                    residual,
+        # Draft target_layer_ids and step ids share the unrolled depth space
+        # [0, num_hidden_layers * num_loops); DFLASH setter stores k+1, captured before step k+1.
+        for step in range(self.start_layer, self.end_layer):
+            if self._is_loop_start(step):
+                hidden_states, residual = self._enter_next_loop(
+                    hidden_states=hidden_states, residual=residual
                 )
-
-            # Match the reference HF semantics for Nanbeige "loop models":
-            # - At the end of each full loop (except the last), convert the
-            #   (hidden_states, residual) representation into real hidden_states
-            #   by applying the missing residual addition.
-            # - If skip_loop_final_norm=False, HF applies RMSNorm after each loop
-            #   (including intermediate loops) before entering the next loop.
-            if loop_idx != self.config.num_loops - 1:
-                if residual is not None:
-                    hidden_states = hidden_states + residual
-                    residual = None
-                if not self.config.skip_loop_final_norm:
-                    hidden_states = self.norm(hidden_states)
+            if step in self.layers_to_capture:
+                aux_hidden_states.append(
+                    hidden_states + residual
+                    if residual is not None
+                    else hidden_states.clone()
+                )
+            hidden_states, residual = self.layers[step](
+                positions, hidden_states, forward_batch, residual
+            )
 
         if not self.pp_group.is_last_rank:
             return PPProxyTensors(
@@ -502,14 +560,12 @@ class NanbeigeForCausalLM(nn.Module):
         params_dict = dict(self.named_parameters())
         for name, loaded_weight in weights:
             layer_id = get_layer_id(name)
-            if (
-                layer_id is not None
-                and hasattr(self.model, "start_layer")
-                and (
-                    layer_id < self.model.start_layer
-                    or layer_id >= self.model.end_layer
-                )
-            ):
+            if layer_id is not None:
+                # Checkpoint layer ids are physical; this PP rank may not need every one.
+                if isinstance(self.model.physical_layers[layer_id], PPMissingLayer):
+                    continue
+                name = name.replace("model.layers.", "model.physical_layers.", 1)
+            elif "model.norm." in name and isinstance(self.model.norm, PPMissingLayer):
                 continue
 
             if "rotary_emb.inv_freq" in name or "projector" in name:

@@ -109,3 +109,12 @@ Each `hf/` folder holds the HF README (model card), config, custom modeling code
   - This is consistent with section 3 above: Nanbeige leaves the least room.
   - The self-spec directions in LoopSpec/WFD are a better fit for Ouro (entropy-regularized early exit) and Huginn (32+ recurrences).
 - Found an SGLang bug: IQuest's KV pool is allocated at twice the needed size (320 layers instead of 160).
+
+### [`experiments/2026-09-24_loop_pp/`](experiments/2026-09-24_loop_pp/REPORT.md) — pipeline parallelism split by loop, vs TP/DP on 2 GPUs
+- Implemented unrolled-depth PP for Nanbeige (`python/sglang/srt/models/nanbeige.py`). With PP2, each GPU runs one whole loop and holds only that loop's KV.
+  - PP1 output is bit-identical to the original code.
+  - PP2 differs from it only by numerical noise.
+- **Throughput: PP2 is slower than a single GPU** (conc 1: 106 vs 285 tok/s; conc 256: 11.1k vs 13.2k).
+  - **DP2 is the best 2-GPU option** (conc 256: 16.0k); TP2 comes second (14.6k).
+  - The bottleneck is a ~10 ms per-step floor in SGLang's PP framework. Qwen3-8B native PP2 shows the same floor.
+- Next: profile that floor, or build a custom scheduler that pipelines the two loops across GPUs.

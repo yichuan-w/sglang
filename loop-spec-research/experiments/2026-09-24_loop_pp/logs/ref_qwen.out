@@ -1,0 +1,26 @@
+[2026-09-24 16:35:51] The server is fired up and ready to roll!
+[2026-09-24 16:35:36] The server is fired up and ready to roll!
+q_tp2 c=1 Output token throughput (tok/s):         297.26    
+q_tp2 c=1 Median TTFT (ms):                        26.10     
+q_tp2 c=1 Median TPOT (ms):                        3.31      
+q_tp2 c=16 Output token throughput (tok/s):         3857.35   
+q_tp2 c=16 Median TTFT (ms):                        105.05    
+q_tp2 c=16 Median TPOT (ms):                        3.93      
+q_tp2 c=64 Output token throughput (tok/s):         11311.38  
+q_tp2 c=64 Median TTFT (ms):                        297.02    
+q_tp2 c=64 Median TPOT (ms):                        5.03      
+q_tp2 c=256 Output token throughput (tok/s):         16973.86  
+q_tp2 c=256 Median TTFT (ms):                        982.58    
+q_tp2 c=256 Median TPOT (ms):                        13.00     
+q_pp2 c=1 Output token throughput (tok/s):         102.63    
+q_pp2 c=1 Median TTFT (ms):                        44.88     
+q_pp2 c=1 Median TPOT (ms):                        9.74      
+q_pp2 c=16 Output token throughput (tok/s):         1169.10   
+q_pp2 c=16 Median TTFT (ms):                        120.69    
+q_pp2 c=16 Median TPOT (ms):                        13.44     
+q_pp2 c=64 Output token throughput (tok/s):         4305.06   
+q_pp2 c=64 Median TTFT (ms):                        317.82    
+q_pp2 c=64 Median TPOT (ms):                        14.31     
+q_pp2 c=256 Output token throughput (tok/s):         11630.30  
+q_pp2 c=256 Median TTFT (ms):                        932.19    
+q_pp2 c=256 Median TPOT (ms):                        20.17     

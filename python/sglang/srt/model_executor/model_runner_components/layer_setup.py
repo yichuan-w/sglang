@@ -18,8 +18,9 @@ class AttentionAndMoeLayers(NamedTuple):
 
 
 def _get_loop_num(hf_config: Any) -> int:
-    # Nanbeige uses num_loops; IQuestLoopCoder uses loop_num.
-    return int(getattr(hf_config, "loop_num", getattr(hf_config, "num_loops", 1)) or 1)
+    # IQuestLoopCoder reports a physical layer range (loop_num); Nanbeige (num_loops)
+    # already reports its unrolled range, so it must not be multiplied again.
+    return int(getattr(hf_config, "loop_num", 1) or 1)
 
 
 def compute_attention_and_moe_layers(layer_model: Any) -> AttentionAndMoeLayers:
@@ -29,8 +30,8 @@ def compute_attention_and_moe_layers(layer_model: Any) -> AttentionAndMoeLayers:
     dsa_indexers: list[Any] = []
     mha_companion_layers: list[Any] = []
 
-    # Loop models (Nanbeige / IQuestLoopCoder) store one RadixAttention per loop
-    # in a ModuleList. Prefill CUDA graph indexes by layer_id, so expand and
+    # IQuestLoopCoder stores one RadixAttention per loop in a ModuleList
+    # (Nanbeige instead unrolls one layer entry per loop step). Prefill CUDA graph indexes by layer_id, so expand and
     # reorder to a dense [0..N) list.
     has_loop_attn = False
 

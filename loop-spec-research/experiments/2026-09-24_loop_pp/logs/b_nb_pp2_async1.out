@@ -1,0 +1,9 @@
+nb_pp2_async1 c=1 Output token throughput (tok/s):         96.33     
+nb_pp2_async1 c=1 Median TTFT (ms):                        44.87     
+nb_pp2_async1 c=1 Median TPOT (ms):                        10.46     
+nb_pp2_async1 c=64 Output token throughput (tok/s):         3187.73   
+nb_pp2_async1 c=64 Median TTFT (ms):                        303.60    
+nb_pp2_async1 c=64 Median TPOT (ms):                        19.53     
+nb_pp2_async1 c=256 Output token throughput (tok/s):         10681.98  
+nb_pp2_async1 c=256 Median TTFT (ms):                        751.54    
+nb_pp2_async1 c=256 Median TPOT (ms):                        22.37     

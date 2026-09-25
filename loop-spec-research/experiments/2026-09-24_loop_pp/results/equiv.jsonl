@@ -1,0 +1,2 @@
+{"ref": 30500, "cand": 30501, "identical_greedy": "64/64", "earliest_divergence_tok": null, "max_abs_logprob_diff": 0.0, "mean_abs_logprob_diff": 0.0}
+{"ref": 30500, "cand": 30502, "identical_greedy": "61/64", "earliest_divergence_tok": 89, "max_abs_logprob_diff": 0.1856, "mean_abs_logprob_diff": 0.000262}
